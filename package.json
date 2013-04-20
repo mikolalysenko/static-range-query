@@ -1,0 +1,42 @@
+{
+  "name": "static-range-query",
+  "version": "0.0.0",
+  "description": "Fast n-dimensional orthogonal range searches for static point sets",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bfs-tree-layout": "~0.0.3",
+    "inorder-tree-layout": "~0.0.6",
+    "lower-bound": "~0.0.1",
+    "upper-bound": "~0.0.0"
+  },
+  "devDependencies": {
+    "tap": "~0.4.1"
+  },
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mikolalysenko/static-range-query.git"
+  },
+  "keywords": [
+    "range",
+    "static",
+    "search",
+    "orthogonal",
+    "box",
+    "n-dimension",
+    "2d",
+    "3d",
+    "geometry",
+    "math",
+    "query"
+  ],
+  "author": "Mikola Lysenko",
+  "license": "MIT",
+  "readmeFilename": "README.md",
+  "gitHead": "a58963780dad5b5922c8aa23880d0e6f0c3dd00b"
+}
