@@ -53,9 +53,12 @@ Evaluates a range query on the point set.
 * `hi` is an upper bound on the bounding rectangle to query
 * `cb` is a callback which gets called once per each point in the range with the index of a point.
 
+
 **Time Complexity** `O(log(points.length)^points[0].length + k)` where `k` is the number of points processed in the range.
 
-**Note** You can terminate the search early by returning `true` from `cb`, for example:
+**Note** The points are visited in lexicographic order
+
+**Other Note** You can terminate the search early by returning `true` from `cb`, for example:
 
 ```javascript
 rangeQuery([0, 0, 0], [100, 100, 100], function(i) {

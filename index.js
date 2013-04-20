@@ -68,12 +68,7 @@ RangeTree.prototype.search = function(d, bounds_lo, bounds_hi, cb) {
       if(lo <= coords[bfs.lo(n, v)] && coords[bfs.hi(n,v)] <= hi) {
         return children[v].search(d+1, bounds_lo, bounds_hi, cb)
       }
-      
-      //Visit split node
-      if(cb(this.indices[v])) {
-        return true
-      }
-      
+            
       //Save split node
       vsplit = v
       
@@ -99,6 +94,12 @@ RangeTree.prototype.search = function(d, bounds_lo, bounds_hi, cb) {
           v = r
         }
       }
+      
+      //Visit split node
+      if(cb(this.indices[vsplit])) {
+        return true
+      }
+
       
       //Visit right trees
       v = bfs.right(n, vsplit)
