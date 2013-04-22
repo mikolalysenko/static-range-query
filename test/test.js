@@ -1,4 +1,5 @@
 var preprocess = require("../index.js")
+  , noise = require("spatial-noise")
 
 require("tap").test("static range tree", function(t) {
   var points, search
@@ -74,15 +75,28 @@ require("tap").test("static range tree", function(t) {
   getRange([-1,-1,-1,-1,-1,-1,-1,-1,-1,-1], [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1], [])
   getRange([1,1,1,1,1,1,1,1,1,1], [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1], [])
   
-  /*
-  //2D tests
-  points = [[0, 0], [0,1], [0,2],
-            [1, 0], [1,1], [1,2] ]
+  
+  //Test with 7 points
+  points = [[0,0], [1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]
   search = preprocess(points)
+  getRange([0,0], [3,3], [0,1,2,3])
   
-  getRange([0, 0], [1,1], [0,1,3,4])
-  */
   
+  //Fuzz test
+  points = new Array(1000)
+  for(var i=0; i<1000; ++i) {
+    var p = new Array(3)
+    for(var j=0; j<3; ++j) {
+      p[j] = Math.random() * 1000
+    }
+    points[i] = p
+  }
+  var count = 0
+  preprocess(points)([0, 0, 0], [1000, 1000, 1000], function(i) {
+    ++count
+  })
+  t.equals(count, 1000)
+
 
   t.end()
 })

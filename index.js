@@ -99,7 +99,6 @@ RangeTree.prototype.search = function(d, bounds_lo, bounds_hi, cb) {
       if(cb(this.indices[vsplit])) {
         return true
       }
-
       
       //Visit right trees
       v = bfs.right(n, vsplit)
