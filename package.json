@@ -1,6 +1,6 @@
 {
   "name": "static-range-query",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Fast n-dimensional orthogonal range searches for static point sets",
   "main": "index.js",
   "directories": {

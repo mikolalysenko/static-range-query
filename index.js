@@ -1,15 +1,18 @@
 "use strict"
 
 var bfs = require("bfs-tree-layout")
-  , bfs2inorder = require("bfs2inorder")
   , bits = require("bit-twiddle")
+  , bfs2inorder = require("bfs2inorder")
   , inorder = require("inorder-tree-layout")
   , lowerBound = require("lower-bound")
   , upperBound = require("upper-bound")
+  , assert = require("assert")
 
+var TREE_CUTOFF = 8
 
 var SCRATCH = [new Uint32Array(1024)]
   , BUFFER  = [new Uint32Array(1024)]
+  , TEMP    = [new Uint32Array(SCRATCH[0].buffer)]
   
 function merge(d, begin, pivot, end) {
   var a_ptr = begin|0, a_end = pivot|0, a
@@ -45,6 +48,29 @@ function merge(d, begin, pivot, end) {
       dst[i+begin] = src[i]
     }
   }
+}
+
+function TerminalNode(points) {
+  this.points = points
+}
+
+TerminalNode.prototype.search = function(DIMENSION, lo, hi, cb) {
+  var points = this.points
+    , n = points.length|0
+    , i, j, p
+i_loop:
+  for(i=0; i<n; ++i) {
+    p = points[i]
+    for(j=0; j<DIMENSION; ++j) {
+      if(!(lo[j] <= p[j+1] && p[j+1] <= hi[j])) {
+        continue i_loop
+      }
+    }
+    if(cb(p[0])) {
+      return true
+    }
+  }
+  return false
 }
 
 function RangeTree1D(coords, indices) {
@@ -165,24 +191,65 @@ RangeTree.prototype.search = function(DIMENSION, bounds_lo, bounds_hi, cb) {
   return false
 }
 
+
+function comparePoints(a, b) {
+  var i, d
+  for(i=a.length-1; i>0; --i) {
+    d = a[i] - b[i]
+    if(d) { return d }
+  }
+  return a[0] - b[0]
+}
+
+function makeTerminal(DIMENSION, begin, end) {
+  DIMENSION   = DIMENSION|0
+  begin       = begin|0
+  end         = end|0
+  var n       = (end - begin)|0
+    , points  = new Array(n)
+    , i, j, p
+  for(i=0; i<n; ++i) {
+    p = new Array(DIMENSION+1)
+    for(j=0; j<=DIMENSION; ++j) {
+      p[j] = BUFFER[j][i+begin]
+    }
+    points[i] = p
+  }
+  points.sort(comparePoints)
+  return new TerminalNode(points)
+}
+
 function makeRangeTree(DIMENSION, begin, end) {
+  DIMENSION   = DIMENSION|0
+  begin       = begin|0
+  end         = end|0
   if(DIMENSION === 1) {
     return new RangeTree1D(new Float64Array(BUFFER[1].buffer.slice(begin*8, end*8)), new Uint32Array(BUFFER[0].buffer.slice(begin*4, end*4)))
   }
-  var n = (end-begin)|0
-    , coords = new Float64Array(n)
-    , indices = new Uint32Array(n)
-    , i, j
+  var n         = (end-begin)|0
+    , coords    = new Float64Array(n)
+    , indices   = new Uint32Array(n)
+    , children  = new Array(n)
+    , carray    = BUFFER[DIMENSION]
+    , iarray    = BUFFER[0]
+    , b2i       = TEMP[DIMENSION]
+    , cutoff    = Math.pow(TREE_CUTOFF, DIMENSION)|0
+    , i, j, k, lo, hi
   for(i=0, j=bfs.begin(n); i<n; ++i, j=bfs.next(n, j)) {
-    coords[j] = BUFFER[DIMENSION][i+begin]
-    indices[j] = BUFFER[0][i+begin]
+    k          = i + begin
+    coords[j]  = carray[k]
+    indices[j] = iarray[k]
+    b2i[j]     = k
   }
-  var children  = new Array(n)
   for(j=n-1; j>=0; --j) {
-    var lo = begin+bfs2inorder(n, bfs.lo(n, j))
-      , hi = begin+bfs2inorder(n, bfs.hi(n, j)) + 1
-    merge(DIMENSION-1, lo, begin+bfs2inorder(n, j), hi)
-    children[j] = makeRangeTree(DIMENSION-1, lo, hi)
+    lo = b2i[bfs.lo(n, j)]
+    hi = b2i[bfs.hi(n, j)] + 1
+    merge(DIMENSION-1, lo, b2i[j], hi)
+    if(hi - lo < cutoff) {
+      children[j] = makeTerminal(DIMENSION-1, lo, hi)
+    } else {
+      children[j] = makeRangeTree(DIMENSION-1, lo, hi)
+    }
   }
   return new RangeTree(coords, indices, children)
 }
@@ -214,6 +281,7 @@ function buildTree(points) {
     if(BUFFER.length <= i) {
       BUFFER.push(new Float64Array(Math.max(1024, bits.nextPow2(n))))
       SCRATCH.push(new Float64Array(Math.max(1024, bits.nextPow2(n))))
+      TEMP.push(new Uint32Array(SCRATCH[i].buffer))
     } else if(BUFFER[i].length < n) {
       if(i === 0) {
         BUFFER[i] = new Uint32Array(bits.nextPow2(n))
@@ -222,6 +290,7 @@ function buildTree(points) {
         BUFFER[i] = new Float64Array(bits.nextPow2(n))
         SCRATCH[i] = new Float64Array(bits.nextPow2(n))
       }
+      TEMP[i] = new Uint32Array(SCRATCH[i].buffer)
     }
     dst = BUFFER[i]
     for(j=0; j<n; ++j) {

@@ -95,8 +95,8 @@ require("tap").test("static range tree", function(t) {
   
   
   //Fuzz test
-  points = new Array(1000)
-  for(var i=0; i<1000; ++i) {
+  points = new Array(100)
+  for(var i=0; i<100; ++i) {
     var p = new Array(3)
     for(var j=0; j<3; ++j) {
       p[j] = Math.random() * 1000
@@ -107,7 +107,7 @@ require("tap").test("static range tree", function(t) {
   preprocess(points)([0, 0, 0], [1000, 1000, 1000], function(i) {
     ++count
   })
-  t.equals(count, 1000)
+  t.equals(count, 100)
   
   t.end()
 })
