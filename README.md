@@ -7,8 +7,8 @@ Given a collection of points in n-dimensional space, preprocesses these points s
 ```javascript
 var preprocess = require("static-range-query")
 
-//Generate 10000 4D points
-var D = 4, N = 10000
+//Generate 10000 3D points
+var D = 3, N = 10000
 var points = new Array(N)
 for(var i=0; i<N; ++i) {
   var p = new Array(D)
@@ -72,6 +72,10 @@ rangeQuery([0, 0, 0], [100, 100, 100], function(i) {
   return false
 })
 ```
+
+## When should I use this library?
+
+Preprocessing the point set is relatively slow, mostly due to the creation of many typed arrays.  On the other hand, queries are pretty fast with this library.  If you are only going to do a few queries, you are better off using brute force.  On the other hand, if you have a big data set and are willing to wait for preprocessing to finish, then this library may be a good choice for you.
 
 # Credits
 (c) 2013 Mikola Lysenko. MIT License
