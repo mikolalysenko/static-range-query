@@ -48,9 +48,6 @@ require("tap").test("static range tree", function(t) {
   getRange([0,0], [0,1], [0])
   getRange([-1,0], [0,0], [0])
   getRange([0,-1], [0,0], [0])
-  getRange([-1], [-1], [])
-  getRange([1], [1], [])
-  getRange([1], [-1], [])
   
   //2D line test
   points = [[0,0], [1,0], [2,0], [2,0], [2,0], [3,0], [4,0], [5,0] ]
@@ -66,7 +63,22 @@ require("tap").test("static range tree", function(t) {
   getRange([2.2,0], [4,0], [5,6])
   getRange([0,0], [0,0], [0])
   getRange([5,0], [5,0], [7])
-  
+
+  points = [[0,0], [1,1], [2,2], [2,2], [2,2], [3,3], [4,4], [5,5] ]
+  search = preprocess(points)
+  getRange([0,0], [2,2], [0,1,2,3,4])
+  getRange([0,0], [3,3], [0,1,2,3,4,5])
+  getRange([0,0], [2.5,2.5], [0,1,2,3,4])
+  getRange([-1,-1], [0,0], [0])
+  getRange([-10,-10], [-10,-10], [])
+  getRange([1000,1000], [1000,1000], [])
+  getRange([3,3], [7,7], [5,6,7])
+  getRange([3,3], [5,5], [5,6,7])
+  getRange([2.2,2.2], [4,4], [5,6])
+  getRange([0,0], [0,0], [0])
+  getRange([5,5], [5,5], [7])
+
+
   //n-d singleton test
   points = [[0,0,0,0,0,0,0,0,0,0]]
   search = preprocess(points)
@@ -96,7 +108,6 @@ require("tap").test("static range tree", function(t) {
     ++count
   })
   t.equals(count, 1000)
-
-
+  
   t.end()
 })
