@@ -1,5 +1,4 @@
 var preprocess = require("../index.js")
-  , noise = require("spatial-noise")
 
 require("tap").test("static range tree", function(t) {
   var points, search

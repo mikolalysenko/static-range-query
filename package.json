@@ -10,7 +10,8 @@
     "bfs-tree-layout": "~0.0.3",
     "inorder-tree-layout": "~0.0.7",
     "lower-bound": "~0.0.1",
-    "upper-bound": "~0.0.0"
+    "upper-bound": "~0.0.0",
+    "bit-twiddle": "~0.0.2"
   },
   "devDependencies": {
     "tap": "~0.4.1"
