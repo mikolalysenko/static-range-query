@@ -2,13 +2,13 @@
 
 var bfs = require("bfs-tree-layout")
   , bits = require("bit-twiddle")
-  , bfs2inorder = require("bfs2inorder")
   , inorder = require("inorder-tree-layout")
   , lowerBound = require("lower-bound")
   , upperBound = require("upper-bound")
   , assert = require("assert")
 
-var TREE_CUTOFF = 8
+var CUTOFF_SHIFT = 5
+  , CUTOFF_VALUE = (1<<CUTOFF_SHIFT)
 
 var SCRATCH = [new Uint32Array(1024)]
   , BUFFER  = [new Uint32Array(1024)]
@@ -62,7 +62,7 @@ i_loop:
   for(i=0; i<n; ++i) {
     p = points[i]
     for(j=0; j<DIMENSION; ++j) {
-      if(!(lo[j] <= p[j+1] && p[j+1] <= hi[j])) {
+      if(!(lo[j] <= p[j+1]  && p[j+1] <= hi[j])) {
         continue i_loop
       }
     }
@@ -102,8 +102,10 @@ RangeTree1D.prototype.search = function(DIMENSION, lo, hi, cb) {
   return false
 }
 
-function RangeTree(coords, indices, children) {
+function RangeTree(coords, loBound, hiBound, indices, children) {
   this.coords = coords
+  this.loBound = loBound
+  this.hiBound = hiBound
   this.indices = indices
   this.children = children
 }
@@ -112,6 +114,8 @@ RangeTree.prototype.search = function(DIMENSION, bounds_lo, bounds_hi, cb) {
   DIMENSION = (DIMENSION-1)|0
   var coords = this.coords
     , children = this.children
+    , loBound = this.loBound
+    , hiBound = this.hiBound
     , n = coords.length
     , lo = +bounds_lo[DIMENSION]
     , hi = +bounds_hi[DIMENSION]
@@ -123,17 +127,20 @@ RangeTree.prototype.search = function(DIMENSION, bounds_lo, bounds_hi, cb) {
     return
   }
   while(v < n) {
+    if(children[v] instanceof TerminalNode) {
+      return children[v].search(DIMENSION+1, bounds_lo, bounds_hi, cb)
+    }
     x = coords[v]
-    if(lo < x && hi < x) {
+    if(hi < x) {
       v = bfs.left(n, v)
-    } else if(lo > x && hi > x) {
+    } else if(x < lo) {
       v = bfs.right(n, v)
     } else {
-
       //Handle case where tree is completely contained
-      if(lo <= coords[bfs.lo(n, v)] && coords[bfs.hi(n,v)] <= hi) {
+      if(lo <= loBound[v] && hiBound[v] <= hi) {
         return children[v].search(DIMENSION, bounds_lo, bounds_hi, cb)
       }
+      
       
       //Save split node
       vsplit = v
@@ -143,7 +150,13 @@ RangeTree.prototype.search = function(DIMENSION, bounds_lo, bounds_hi, cb) {
       while(v < n) {
         l = bfs.left(n, v)
         r = l + 1
-        if(lo <= coords[bfs.lo(n, v)]) {
+        if(children[v] instanceof TerminalNode) {
+          if(children[v].search(DIMENSION+1, bounds_lo, bounds_hi, cb)) {
+            return true
+          }
+          break
+        }
+        if(lo <= loBound[v]) {
           if(children[v].search(DIMENSION, bounds_lo, bounds_hi, cb)) {
             return true
           }
@@ -160,7 +173,7 @@ RangeTree.prototype.search = function(DIMENSION, bounds_lo, bounds_hi, cb) {
           v = r
         }
       }
-      
+            
       //Visit split node
       if(cb(this.indices[vsplit])) {
         return true
@@ -171,7 +184,13 @@ RangeTree.prototype.search = function(DIMENSION, bounds_lo, bounds_hi, cb) {
       while(v < n) {
         l = bfs.left(n, v)
         r = l + 1
-        if(coords[bfs.hi(n, v)] <= hi) {
+        if(children[v] instanceof TerminalNode) {
+          if(children[v].search(DIMENSION+1, bounds_lo, bounds_hi, cb)) {
+            return true
+          }
+          break
+        }
+        if(hiBound[v] <= hi) {
           return children[v].search(DIMENSION, bounds_lo, bounds_hi, cb)
         }
         if(coords[v] <= hi) {
@@ -227,31 +246,42 @@ function makeRangeTree(DIMENSION, begin, end) {
     return new RangeTree1D(new Float64Array(BUFFER[1].buffer.slice(begin*8, end*8)), new Uint32Array(BUFFER[0].buffer.slice(begin*4, end*4)))
   }
   var n         = (end-begin)|0
-    , coords    = new Float64Array(n)
-    , indices   = new Uint32Array(n)
-    , children  = new Array(n)
+    , m         = bits.prevPow2(n) >>> CUTOFF_SHIFT
+  if(m === 0) {
+    return makeTerminal(DIMENSION, begin, end)
+  }
+  var coords    = new Float64Array(m)
+    , loBound   = new Float64Array(m)
+    , hiBound   = new Float64Array(m)
+    , indices   = new Uint32Array(m)
+    , children  = new Array(m)
     , carray    = BUFFER[DIMENSION]
     , iarray    = BUFFER[0]
     , b2i       = TEMP[DIMENSION]
-    , cutoff    = Math.pow(TREE_CUTOFF, DIMENSION)|0
-    , i, j, k, lo, hi
+    , i, j, k, lo, hi, l, h
   for(i=0, j=bfs.begin(n); i<n; ++i, j=bfs.next(n, j)) {
     k          = i + begin
-    coords[j]  = carray[k]
-    indices[j] = iarray[k]
     b2i[j]     = k
+    if(j < m) {
+      coords[j]  = carray[k]
+      indices[j] = iarray[k]
+    }
   }
   for(j=n-1; j>=0; --j) {
     lo = b2i[bfs.lo(n, j)]
     hi = b2i[bfs.hi(n, j)] + 1
     merge(DIMENSION-1, lo, b2i[j], hi)
-    if(hi - lo < cutoff) {
-      children[j] = makeTerminal(DIMENSION-1, lo, hi)
-    } else {
-      children[j] = makeRangeTree(DIMENSION-1, lo, hi)
+    if(j < m) {
+      loBound[j] = carray[lo]
+      hiBound[j] = carray[hi-1]
+      if(bfs.leaf(m, j)) {
+        children[j] = makeTerminal(DIMENSION, lo, hi)
+      } else {
+        children[j] = makeRangeTree(DIMENSION-1, lo, hi)
+      }
     }
   }
-  return new RangeTree(coords, indices, children)
+  return new RangeTree(coords, loBound, hiBound, indices, children)
 }
 
 function buildTree(points) {

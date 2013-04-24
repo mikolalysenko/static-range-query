@@ -1,6 +1,6 @@
 var preprocess = require("../index.js")
 
-var n = 1000000
+var n = 100000
 var d = 3
 var max_count = 100
 var time_limit = 1000

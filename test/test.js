@@ -77,8 +77,7 @@ require("tap").test("static range tree", function(t) {
   getRange([2.2,2.2], [4,4], [5,6])
   getRange([0,0], [0,0], [0])
   getRange([5,5], [5,5], [7])
-
-
+  
   //n-d singleton test
   points = [[0,0,0,0,0,0,0,0,0,0]]
   search = preprocess(points)
